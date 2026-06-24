@@ -3,10 +3,7 @@ from groq import Groq
 from src.retriever import retrieve_chunks, format_context
 
 # ── Config ────────────────────────────────────────────────────────────────────
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 LLM_MODEL = "llama-3.1-8b-instant"
-
-client = Groq(api_key=GROQ_API_KEY)
 
 SYSTEM_PROMPT = """You are a helpful document assistant. You answer questions based ONLY on the provided document context.
 
@@ -25,6 +22,7 @@ def ask(question: str, filename_filter: str = None,
     Full RAG pipeline:
     question → retrieve chunks → build prompt → Groq LLM → answer + citations
     """
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     # Step 1 — Retrieve relevant chunks
     chunks = retrieve_chunks(question, n_results=n_chunks,
                              filename_filter=filename_filter)
@@ -87,9 +85,8 @@ Answer based only on the context above:"""
 
 
 if __name__ == "__main__":
-    # Quick test
     import sys
-    if not GROQ_API_KEY:
+    if not os.getenv("GROQ_API_KEY"):
         print("❌ GROQ_API_KEY not set")
         sys.exit(1)
 
