@@ -534,7 +534,7 @@ def fetch_documents():
 
 
 def show_pdf(pdf_bytes):
-    pdf_viewer(pdf_bytes, height=int(700))
+    pdf_viewer(pdf_bytes, height=700)
 
 
 docs = fetch_documents()
