@@ -523,6 +523,7 @@ if "pdf_name"              not in st.session_state: st.session_state.pdf_name   
 if "upload_message"        not in st.session_state: st.session_state.upload_message        = None
 if "delete_success"        not in st.session_state: st.session_state.delete_success        = None
 if "last_processed_upload" not in st.session_state: st.session_state.last_processed_upload = None
+if "pdf_cache"             not in st.session_state: st.session_state.pdf_cache             = {}
 
 
 def fetch_documents():
@@ -531,6 +532,23 @@ def fetch_documents():
         return r.json() if r.status_code == 200 else []
     except Exception:
         return []
+
+
+def switch_doc(filename: str) -> None:
+    """Set active_doc, load its bytes (cache → disk fallback), clear messages, rerun."""
+    bytes_data = st.session_state.pdf_cache.get(filename)
+    if bytes_data is None:
+        try:
+            with open(f"data/{filename}", "rb") as f:
+                bytes_data = f.read()
+            st.session_state.pdf_cache[filename] = bytes_data
+        except Exception:
+            bytes_data = None
+    st.session_state.active_doc = filename
+    st.session_state.pdf_bytes  = bytes_data
+    st.session_state.pdf_name   = filename
+    st.session_state.messages   = []
+    st.rerun()
 
 
 def show_pdf(pdf_bytes):
@@ -575,8 +593,10 @@ with sidebar_col:
                         docs = fetch_documents()
                 except Exception as e:
                     st.error(str(e))
+        raw = uploaded_file.getvalue()
+        st.session_state.pdf_cache[uploaded_file.name] = raw
         st.session_state.last_processed_upload = uploaded_file.name
-        st.session_state.pdf_bytes  = uploaded_file.getvalue()
+        st.session_state.pdf_bytes  = raw
         st.session_state.pdf_name   = uploaded_file.name
         st.session_state.active_doc = uploaded_file.name
         st.session_state.messages   = []
@@ -604,15 +624,7 @@ with sidebar_col:
             name_col, del_col = st.columns([5, 1])
             with name_col:
                 if st.button(short, key=f"doc_{doc['pdf_hash']}", use_container_width=True):
-                    st.session_state.active_doc = doc["filename"]
-                    pdf_path = f"data/{doc['filename']}"
-                    try:
-                        with open(pdf_path, "rb") as f:
-                            st.session_state.pdf_bytes = f.read()
-                        st.session_state.pdf_name = doc["filename"]
-                    except Exception:
-                        pass
-                    st.rerun()
+                    switch_doc(doc["filename"])
             with del_col:
                 if st.button("×", key=f"del_{doc['pdf_hash']}", use_container_width=True):
                     deleted_name = doc["filename"]
@@ -627,24 +639,17 @@ with sidebar_col:
                     st.session_state.messages = []
                     st.session_state.upload_message = None
                     st.session_state.delete_success = deleted_name
-                    # Allow re-uploading the same file after deletion
+                    st.session_state.pdf_cache.pop(deleted_name, None)
                     if st.session_state.last_processed_upload == deleted_name:
                         st.session_state.last_processed_upload = None
                     if was_active:
                         st.session_state.active_doc = None
                         st.session_state.pdf_bytes = None
                         st.session_state.pdf_name = None
-                        # Auto-select first remaining doc
                         remaining = fetch_documents()
                         if remaining:
-                            first = remaining[0]
-                            st.session_state.active_doc = first["filename"]
-                            st.session_state.pdf_name = first["filename"]
-                            try:
-                                with open(f"data/{first['filename']}", "rb") as f:
-                                    st.session_state.pdf_bytes = f.read()
-                            except Exception:
-                                pass
+                            # switch_doc calls st.rerun() internally
+                            switch_doc(remaining[0]["filename"])
                     st.rerun()
 
     # Bottom — upgrade + user
