@@ -8,3 +8,5 @@ chromadb
 groq
 requests
 numpy<2.0
+streamlit
+streamlit-pdf-viewer

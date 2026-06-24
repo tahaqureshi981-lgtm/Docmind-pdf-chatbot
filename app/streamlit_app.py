@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 import requests
-import base64
+from streamlit_pdf_viewer import pdf_viewer
 
 API_URL = "https://docmind-pdf-chatbot-production.up.railway.app"
 
@@ -534,13 +534,7 @@ def fetch_documents():
 
 
 def show_pdf(pdf_bytes):
-    b64 = base64.b64encode(pdf_bytes).decode()
-    st.markdown(
-        f'<iframe src="data:application/pdf;base64,{b64}#toolbar=0" '
-        f'width="100%" height="100%" style="border:none;display:block;'
-        f'min-height:calc(100vh - 56px);"></iframe>',
-        unsafe_allow_html=True
-    )
+    pdf_viewer(pdf_bytes, height=int(700))
 
 
 docs = fetch_documents()
